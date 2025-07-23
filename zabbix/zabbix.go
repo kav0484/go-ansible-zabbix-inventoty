@@ -9,9 +9,10 @@ import (
 )
 
 type Zabbix struct {
-	Url    string
-	Token  string `json:"result"`
-	Client http.Client
+	Url        string
+	Token      string `json:"result"`
+	AuthMethod string
+	Client     http.Client
 }
 
 func (z *Zabbix) Login(zabbixUrl string, zabbixUser string, zabbixPassword string) error {
@@ -22,7 +23,7 @@ func (z *Zabbix) Login(zabbixUrl string, zabbixUser string, zabbixPassword strin
 		"jsonrpc": "2.0",
 		"method": "user.login",
 		"params": {
-			"user": "%s",
+			"username": "%s",
 			"password": "%s"
 		},
 		"id": 1,
@@ -63,7 +64,7 @@ func (z *Zabbix) Logout() error {
 		"method": "user.logout",
 		"params": [],
 		"id": 1,
-		"auth": "%s" 
+		"auth": "%s"
 	}`, z.Token)
 
 	data := bytes.NewBuffer([]byte(jsonLogout))
@@ -91,7 +92,7 @@ func (z *Zabbix) GetHosts(params string) ([]ZabbixHost, error) {
 		"method": "host.get",
 		"params": %s,
 		"id": 1,
-		"auth": "%s" 
+		"auth": "%s"
 	}`, params, z.Token)
 
 	data := bytes.NewBuffer([]byte(jsonGetHosts))
@@ -100,6 +101,11 @@ func (z *Zabbix) GetHosts(params string) ([]ZabbixHost, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if z.AuthMethod == "api_token" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", z.Token))
+	}
+
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := z.Client.Do(req)
@@ -110,8 +116,6 @@ func (z *Zabbix) GetHosts(params string) ([]ZabbixHost, error) {
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-
-	//fmt.Println(string(body))
 
 	if err != nil {
 		return nil, err
@@ -148,9 +152,9 @@ func (z *Zabbix) GetGroup(groupName string) (HostGroup, error) {
 			"filter": {
 				"name": %v
 			}
-		},		
+		},
 		"id": 1,
-		"auth": "%s" 
+		"auth": "%s"
 	}`, string(convertString), z.Token)
 
 	data := bytes.NewBuffer([]byte(jsonGetGroup))
@@ -158,6 +162,9 @@ func (z *Zabbix) GetGroup(groupName string) (HostGroup, error) {
 	req, err := http.NewRequest("POST", z.Url+"/api_jsonrpc.php", data)
 	if err != nil {
 		return HostGroup{}, err
+	}
+	if z.AuthMethod == "api_token" {
+		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", z.Token))
 	}
 	req.Header.Set("Content-Type", "application/json")
 

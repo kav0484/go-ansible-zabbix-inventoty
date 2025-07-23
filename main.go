@@ -30,6 +30,7 @@ func init() {
 
 func main() {
 	var hosts []zabbix.ZabbixHost
+	var zabbixUser, zabbixPassword, zabbixAPIToken string
 
 	//proxy_ip_tag := os.Getenv("PROXY_IP_TAG")
 	//groupsWithJoinTag := os.Getenv("GROUPS_WITH_JOIN_TAG")
@@ -39,23 +40,51 @@ func main() {
 		log.Fatal("environment variable INV_ZABBIX_URL not defined")
 	}
 
-	zabbixUser := os.Getenv("INV_ZABBIX_USER")
-	if zabbixUser == "" {
-		log.Fatal("environment variable INV_ZABBIX_USER not defined")
+	authMethod := os.Getenv("INV_AUTH_METHOD")
+	if authMethod == "" {
+		log.Fatal("environment variable INV_AUTH_METHOD not defined")
 	}
 
-	zabbixPassword := os.Getenv("INV_ZABBIX_PASSWORD")
-	if zabbixPassword == "" {
-		log.Fatal(" variable INV_ZABBIX_PASSWORD not defined")
+	if authMethod == "basic" {
+
+		zabbixUser = os.Getenv("INV_ZABBIX_USER")
+		if zabbixUser == "" {
+			log.Fatal("environment variable INV_ZABBIX_USER not defined")
+		}
+
+		zabbixPassword = os.Getenv("INV_ZABBIX_PASSWORD")
+		if zabbixPassword == "" {
+			log.Fatal(" variable INV_ZABBIX_PASSWORD not defined")
+		}
+	}
+
+	if authMethod == "api_token" {
+		zabbixAPIToken = os.Getenv("INV_ZABBIX_API_TOKEN")
+		if zabbixAPIToken == "" {
+			log.Fatal(" variable INV_ZABBIX_API_TOKEN not defined")
+		}
 	}
 
 	api := zabbix.Zabbix{}
-	err := api.Login(zabbixUrl, zabbixUser, zabbixPassword)
 
-	if err != nil {
-		log.Fatal(err)
+	if authMethod == "basic" {
+
+		api.AuthMethod = "basic"
+
+		err := api.Login(zabbixUrl, zabbixUser, zabbixPassword)
+
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer api.Logout()
+
 	}
-	defer api.Logout()
+
+	if authMethod == "api_token" {
+		api.AuthMethod = "api_token"
+		api.Url = zabbixUrl
+		api.Token = zabbixAPIToken
+	}
 
 	restrictGroups := os.Getenv("INV_HOSTS_RESTRICT_BY_GROUPS")
 	restrictTags := os.Getenv("INV_HOSTS_RESTRICT_BY_TAGS")
