@@ -13,6 +13,7 @@ INV_AUTH_METHOD = basic или api_token
 
 ### basic
 INV_ZABBIX_USER="admin"
+
 INV_ZABBIX_PASSWORD="Password"
 ### ip_token
 INV_ZABBIX_API_TOKEN = "token"
